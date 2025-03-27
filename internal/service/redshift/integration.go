@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 package redshift
+
 // **PLEASE DELETE THIS AND ALL TIP COMMENTS BEFORE SUBMITTING A PR FOR REVIEW!**
 //
 // TIP: ==== INTRODUCTION ====
@@ -61,6 +62,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/names"
 )
+
 // TIP: ==== FILE STRUCTURE ====
 // All resources should follow this basic outline. Improve this resource's
 // maintainability by sticking to it.
@@ -75,7 +77,7 @@ import (
 // @FrameworkResource("aws_redshift_integration", name="Integration")
 func newResourceIntegration(_ context.Context) (resource.ResourceWithConfigure, error) {
 	r := &resourceIntegration{}
-	
+
 	// TIP: ==== CONFIGURABLE TIMEOUTS ====
 	// Users can configure timeout lengths but you need to use the times they
 	// provide. Access the timeout they configure (or the defaults) using,
@@ -97,116 +99,59 @@ type resourceIntegration struct {
 	framework.WithTimeouts
 }
 
-
-// TIP: ==== SCHEMA ====
-// In the schema, add each of the attributes in snake case (e.g.,
-// delete_automated_backups).
-//
-// Formatting rules:
-// * Alphabetize attributes to make them easier to find.
-// * Do not add a blank line between attributes.
-//
-// Attribute basics:
-// * If a user can provide a value ("configure a value") for an
-//   attribute (e.g., instances = 5), we call the attribute an
-//   "argument."
-// * You change the way users interact with attributes using:
-//     - Required
-//     - Optional
-//     - Computed
-// * There are only four valid combinations:
-//
-// 1. Required only - the user must provide a value
-// Required: true,
-//
-// 2. Optional only - the user can configure or omit a value; do not
-//    use Default or DefaultFunc
-// Optional: true,
-//
-// 3. Computed only - the provider can provide a value but the user
-//    cannot, i.e., read-only
-// Computed: true,
-//
-// 4. Optional AND Computed - the provider or user can provide a value;
-//    use this combination if you are using Default
-// Optional: true,
-// Computed: true,
-//
-// You will typically find arguments in the input struct
-// (e.g., CreateDBInstanceInput) for the create operation. Sometimes
-// they are only in the input struct (e.g., ModifyDBInstanceInput) for
-// the modify operation.
-//
-// For more about schema options, visit
-// https://developer.hashicorp.com/terraform/plugin/framework/handling-data/schemas?page=schemas
 func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"additional_encryption_context": schema.MapAttribute{
+				CustomType:  fwtypes.MapOfStringType,
+				ElementType: types.StringType, //TODO: check this is needed
+				Optional:    true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 			names.AttrARN: framework.ARNAttributeComputedOnly(),
+			names.AttrID:  framework.IDAttribute(),
 			names.AttrDescription: schema.StringAttribute{
 				Optional: true,
 			},
-			// TIP: ==== "ID" ATTRIBUTE ====
-			// When using the Terraform Plugin Framework, there is no required "id" attribute.
-			// This is different from the Terraform Plugin SDK. 
-			//
-			// Only include an "id" attribute if the AWS API has an "Id" field, such as "IntegrationId"
-			names.AttrID: framework.IDAttribute(),
-			names.AttrName: schema.StringAttribute{
+			"integration_name": schema.StringAttribute{
 				Required: true,
-				// TIP: ==== PLAN MODIFIERS ====
-				// Plan modifiers were introduced with Plugin-Framework to provide a mechanism
-				// for adjusting planned changes prior to apply. The planmodifier subpackage
-				// provides built-in modifiers for many common use cases such as 
-				// requiring replacement on a value change ("ForceNew: true" in Plugin-SDK 
-				// resources).
-				//
-				// See more:
-				// https://developer.hashicorp.com/terraform/plugin/framework/resources/plan-modification
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"type": schema.StringAttribute{
-				Required: true,
-			},
-		},
-		Blocks: map[string]schema.Block{
-			"complex_argument": schema.ListNestedBlock{
-				// TIP: ==== CUSTOM TYPES ====
-				// Use a custom type to identify the model type of the tested object
-				CustomType: fwtypes.NewListNestedObjectTypeOf[complexArgumentModel](ctx),
-				// TIP: ==== LIST VALIDATORS ====
-				// List and set validators take the place of MaxItems and MinItems in 
-				// Plugin-Framework based resources. Use listvalidator.SizeAtLeast(1) to
-				// make a nested object required. Similar to Plugin-SDK, complex objects 
-				// can be represented as lists or sets with listvalidator.SizeAtMost(1).
-				//
-				// For a complete mapping of Plugin-SDK to Plugin-Framework schema fields, 
-				// see:
-				// https://developer.hashicorp.com/terraform/plugin/framework/migrating/attributes-blocks/blocks
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"nested_required": schema.StringAttribute{
-							Required: true,
-						},
-						"nested_computed": schema.StringAttribute{
-							Computed: true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
-						},
-					},
+			names.AttrKMSKeyID: schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			names.AttrTimeouts: timeouts.Block(ctx, timeouts.Opts{
-				Create: true,
-				Update: true,
-				Delete: true,
-			}),
+			"source_arn": schema.StringAttribute{
+				CustomType: fwtypes.ARNType,
+				Required:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			names.AttrTags:    tftags.TagsAttribute(),
+			names.AttrTagsAll: tftags.TagsAttributeComputedOnly(),
+			names.AttrTargetARN: schema.StringAttribute{
+				CustomType: fwtypes.ARNType,
+				Required:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			Blocks: map[string]schema.Block{
+				names.AttrTimeouts: timeouts.Block(ctx, timeouts.Opts{
+					Create: true,
+					Update: true,
+					Delete: true,
+				}),
+			},
 		},
 	}
 }
@@ -222,13 +167,13 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	// 4. Call the AWS create/put function
 	// 5. Using the output from the create function, set the minimum arguments
 	//    and attributes for the Read function to work, as well as any computed
-	//    only attributes. 
+	//    only attributes.
 	// 6. Use a waiter to wait for create to complete
 	// 7. Save the request plan to response state
 
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().RedshiftClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the plan
 	var plan resourceIntegrationModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -243,7 +188,6 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
 
 	// TIP: -- 4. Call the AWS Create function
 	out, err := conn.CreateIntegration(ctx, &input)
@@ -280,7 +224,7 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 		)
 		return
 	}
-	
+
 	// TIP: -- 7. Save the request plan to response state
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
@@ -299,14 +243,14 @@ func (r *resourceIntegration) Read(ctx context.Context, req resource.ReadRequest
 
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().RedshiftClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the state
 	var state resourceIntegrationModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 3. Get the resource from AWS using an API Get, List, or Describe-
 	// type function, or, better yet, using a finder.
 	out, err := findIntegrationByID(ctx, conn, state.ID.ValueString())
@@ -323,13 +267,13 @@ func (r *resourceIntegration) Read(ctx context.Context, req resource.ReadRequest
 		)
 		return
 	}
-	
+
 	// TIP: -- 5. Set the arguments and attributes
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 6. Set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -357,7 +301,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 	// 6. Save the request plan to response state
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().RedshiftClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the plan
 	var plan, state resourceIntegrationModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -365,7 +309,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 3. Get the difference between the plan and state, if any
 	diff, d := flex.Diff(ctx, plan, state)
 	resp.Diagnostics.Append(d...)
@@ -379,7 +323,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		// TIP: -- 4. Call the AWS modify/update function
 		out, err := conn.UpdateIntegration(ctx, &input)
 		if err != nil {
@@ -396,7 +340,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 			)
 			return
 		}
-		
+
 		// TIP: Using the output from the update function, re-set any computed attributes
 		resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 		if resp.Diagnostics.HasError() {
@@ -437,19 +381,19 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 	// 5. Use a waiter to wait for delete to complete
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().RedshiftClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the state
 	var state resourceIntegrationModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 3. Populate a delete input structure
 	input := redshift.DeleteIntegrationInput{
 		IntegrationId: state.ID.ValueStringPointer(),
 	}
-	
+
 	// TIP: -- 4. Call the AWS delete function
 	_, err := conn.DeleteIntegration(ctx, &input)
 	// TIP: On rare occassions, the API returns a not found error after deleting a
@@ -465,7 +409,7 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 		)
 		return
 	}
-	
+
 	// TIP: -- 5. Use a waiter to wait for delete to complete
 	deleteTimeout := r.DeleteTimeout(ctx, state.Timeouts)
 	_, err = waitIntegrationDeleted(ctx, conn, state.ID.ValueString(), deleteTimeout)
@@ -488,7 +432,6 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 func (r *resourceIntegration) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root(names.AttrID), req, resp)
 }
-
 
 // TIP: ==== STATUS CONSTANTS ====
 // Create constants for states and statuses if the service does not
@@ -558,10 +501,10 @@ func waitIntegrationUpdated(ctx context.Context, conn *redshift.Client, id strin
 // be additional pending states, however.
 func waitIntegrationDeleted(ctx context.Context, conn *redshift.Client, id string, timeout time.Duration) (*awstypes.Integration, error) {
 	stateConf := &retry.StateChangeConf{
-		Pending:                   []string{statusDeleting, statusNormal},
-		Target:                    []string{},
-		Refresh:                   statusIntegration(ctx, conn, id),
-		Timeout:                   timeout,
+		Pending: []string{statusDeleting, statusNormal},
+		Target:  []string{},
+		Refresh: statusIntegration(ctx, conn, id),
+		Timeout: timeout,
 	}
 
 	outputRaw, err := stateConf.WaitForStateContext(ctx)
@@ -623,33 +566,19 @@ func findIntegrationByID(ctx context.Context, conn *redshift.Client, id string) 
 	return out.Integration, nil
 }
 
-// TIP: ==== DATA STRUCTURES ====
-// With Terraform Plugin-Framework configurations are deserialized into
-// Go types, providing type safety without the need for type assertions.
-// These structs should match the schema definition exactly, and the `tfsdk`
-// tag value should match the attribute name. 
-//
-// Nested objects are represented in their own data struct. These will 
-// also have a corresponding attribute type mapping for use inside flex
-// functions.
-//
-// See more:
-// https://developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values
 type resourceIntegrationModel struct {
-	ARN             types.String                                          `tfsdk:"arn"`
-	ComplexArgument fwtypes.ListNestedObjectValueOf[complexArgumentModel] `tfsdk:"complex_argument"`
-	Description     types.String                                          `tfsdk:"description"`
-	ID              types.String                                          `tfsdk:"id"`
-	Name            types.String                                          `tfsdk:"name"`
-	Timeouts        timeouts.Value                                        `tfsdk:"timeouts"`
-	Type            types.String                                          `tfsdk:"type"`
+	AdditionalEncryptionContext fwtypes.MapValueOf[types.String] `tfsdk:"additional_encryption_context"`
+	Description                 types.String                     `tfsdk:"description"`
+	ID                          types.String                     `tfsdk:"id"`
+	IntegrationARN              types.String                     `tfsdk:"arn"`
+	IntegrationName             types.String                     `tfsdk:"integration_name"`
+	KmsKeyID                    types.String                     `tfsdk:"kms_key_id"`
+	SourceARN                   fwtypes.ARN                      `tfsdk:"source_arn"`
+	Tags                        types.Map                        `tfsdk:"tags"`
+	TagsAll                     types.Map                        `tfsdk:"tags_all"`
+	TargetARN                   fwtypes.ARN                      `tfsdk:"target_arn"`
+	Timeouts                    timeouts.Value                   `tfsdk:"timeouts"`
 }
-
-type complexArgumentModel struct {
-	NestedRequired types.String `tfsdk:"nested_required"`
-	NestedOptional types.String `tfsdk:"nested_optional"`
-}
-
 
 // TIP: ==== SWEEPERS ====
 // When acceptance testing resources, interrupted or failed tests may
@@ -664,7 +593,7 @@ type complexArgumentModel struct {
 // Once the sweeper function is implemented, register it in sweeper.go
 // as follows:
 //
-//   awsv2.Register("aws_redshift_integration", sweepIntegrations)
+//	awsv2.Register("aws_redshift_integration", sweepIntegrations)
 //
 // See more:
 // https://hashicorp.github.io/terraform-provider-aws/running-and-writing-acceptance-tests/#acceptance-test-sweepers

@@ -272,7 +272,6 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 		}
 
 		prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
-		//TODO: fix bug
 
 		resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 		if resp.Diagnostics.HasError() {

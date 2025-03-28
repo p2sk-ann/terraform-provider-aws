@@ -181,6 +181,68 @@ resource "null_resource" "dynamodb_seed" {
   depends_on = [aws_dynamodb_table.sample]
 }
 
+// for switching
+resource "aws_dynamodb_table" "sample2" {
+  name         = "sample_table2"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "ID"
+
+  attribute {
+    name = "ID"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = { Name = "sample_table" }
+}
+
+resource "aws_dynamodb_resource_policy" "dynamodb_policy2" {
+  resource_arn = aws_dynamodb_table.sample2.arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "redshift.amazonaws.com"
+        }
+        Action = [
+          "dynamodb:ExportTableToPointInTime",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.sample2.name}"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnEquals = {
+            "aws:SourceArn" = "arn:aws:redshift:${var.aws_region}:${data.aws_caller_identity.current.account_id}:integration:*"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "redshift.amazonaws.com"
+        }
+        Action   = "dynamodb:DescribeExport"
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.sample2.name}/export/*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnEquals = {
+            "aws:SourceArn" = "arn:aws:redshift:${var.aws_region}:${data.aws_caller_identity.current.account_id}:integration:*"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_redshift_subnet_group" "main" {
   name        = "sample-redshift-subnet-group"
   description = "Subnet group for Redshift cluster (private subnets)"
@@ -230,7 +292,10 @@ resource "aws_redshift_resource_policy" "redshift_policy" {
         Resource = aws_redshift_cluster.main.cluster_namespace_arn
         Condition = {
           StringEquals = {
-            "aws:SourceArn" = aws_dynamodb_table.sample.arn
+            "aws:SourceArn" = [
+              aws_dynamodb_table.sample.arn,
+              aws_dynamodb_table.sample2.arn
+            ]
           }
         }
       },
@@ -339,7 +404,10 @@ resource "aws_redshift_resource_policy" "serverless_integration_policy" {
         Resource = aws_redshiftserverless_namespace.serverless_namespace.arn
         Condition = {
           StringEquals = {
-            "aws:SourceArn" = aws_dynamodb_table.sample.arn
+            "aws:SourceArn" = [
+              aws_dynamodb_table.sample.arn,
+              aws_dynamodb_table.sample2.arn
+            ]
           }
         }
       },

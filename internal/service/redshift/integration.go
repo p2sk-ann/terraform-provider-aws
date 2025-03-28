@@ -272,7 +272,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 
 	if diff.HasChanges() {
 		var input redshift.ModifyIntegrationInput
-		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input)...) //TODO: !! modify here
+		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}

@@ -3,13 +3,6 @@
 
 package redshift
 
-//TODO: delete if not needed, if need, import
-//	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-//	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-// "github.com/hashicorp/terraform-provider-aws/internal/conns"
-// "github.com/hashicorp/terraform-provider-aws/internal/sweep"
-// sweepfw "github.com/hashicorp/terraform-provider-aws/internal/sweep/framework"
-
 import (
 	"context"
 	"errors"
@@ -27,14 +20,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-aws/internal/create"
 	"github.com/hashicorp/terraform-provider-aws/internal/errs"
 	"github.com/hashicorp/terraform-provider-aws/internal/errs/fwdiag"
 	"github.com/hashicorp/terraform-provider-aws/internal/framework"
 	"github.com/hashicorp/terraform-provider-aws/internal/framework/flex"
 	fwtypes "github.com/hashicorp/terraform-provider-aws/internal/framework/types"
-	tfslices "github.com/hashicorp/terraform-provider-aws/internal/slices"
 	tftags "github.com/hashicorp/terraform-provider-aws/internal/tags"
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/names"
@@ -73,19 +64,13 @@ type resourceIntegration struct {
 	framework.WithTimeouts
 }
 
-// !! https://developer.hashicorp.com/terraform/plugin/framework/resources
-// func (*resourceIntegration) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
-// 	response.TypeName = "aws_redshift_integration"
-// }
-
 func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"additional_encryption_context": schema.MapAttribute{
 				CustomType:  fwtypes.MapOfStringType,
-				ElementType: types.StringType, //TODO: check this is needed
+				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
 				},
@@ -143,15 +128,13 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	var input redshift.CreateIntegrationInput
-	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/redshift#CreateIntegrationInput
 	resp.Diagnostics.Append(flex.Expand(ctx, plan, &input)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Additional fields.
-	// https://github.com/hashicorp/terraform-provider-aws/blob/main/docs/resource-tagging.md
-	input.TagList = getTagsIn(ctx) //TODO: survey later
+	input.TagList = getTagsIn(ctx)
 
 	out, err := conn.CreateIntegration(ctx, &input)
 	if err != nil {
@@ -161,7 +144,6 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 		)
 		return
 	}
-	//TODO: delete if not needed
 	if out == nil || out.IntegrationArn == nil {
 		resp.Diagnostics.AddError(
 			create.ProblemStandardMessage(names.Redshift, create.ErrActionCreating, ResNameIntegration, plan.IntegrationName.String(), nil),
@@ -174,19 +156,17 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	plan.IntegrationARN = flex.StringToFramework(ctx, out.IntegrationArn)
 	plan.setID()
 
-	// TOOD: delete if not needed
-	// prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
+	prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
 
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TOOD: delete if not needed
 	// Null vs. empty map handling.
-	// if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
-	// 	plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
-	// }
+	if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
+		plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
+	}
 
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
 	integration, err := waitIntegrationCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
@@ -235,21 +215,19 @@ func (r *resourceIntegration) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	// TOOD: delete if not needed
-	// prevAdditionalEncryptionContext := state.AdditionalEncryptionContext
+	prevAdditionalEncryptionContext := state.AdditionalEncryptionContext
 
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TOOD: delete if not needed
 	// Null vs. empty map handling.
-	// if prevAdditionalEncryptionContext.IsNull() && !state.AdditionalEncryptionContext.IsNull() && len(state.AdditionalEncryptionContext.Elements()) == 0 {
-	// 	state.AdditionalEncryptionContext = prevAdditionalEncryptionContext
-	// }
+	if prevAdditionalEncryptionContext.IsNull() && !state.AdditionalEncryptionContext.IsNull() && len(state.AdditionalEncryptionContext.Elements()) == 0 {
+		state.AdditionalEncryptionContext = prevAdditionalEncryptionContext
+	}
 
-	setTagsOut(ctx, out.Tags) //TODO: survey later
+	setTagsOut(ctx, out.Tags)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -285,7 +263,6 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 			)
 			return
 		}
-		//TODO: delete if not needed
 		if out == nil || out.IntegrationArn == nil {
 			resp.Diagnostics.AddError(
 				create.ProblemStandardMessage(names.Redshift, create.ErrActionUpdating, ResNameIntegration, plan.ID.String(), nil),
@@ -294,10 +271,19 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 			return
 		}
 
+		prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
+		//TODO: fix bug
+
 		resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
+		// Null vs. empty map handling.
+		if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
+			plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
+		}
+
 	}
 
 	updateTimeout := r.UpdateTimeout(ctx, plan.Timeouts)
@@ -322,7 +308,6 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	//TODO: if error, use "IntegrationIdentifier: aws.String(data.ID.ValueString())," instead.
 	input := redshift.DeleteIntegrationInput{
 		IntegrationArn: state.ID.ValueStringPointer(),
 	}
@@ -351,141 +336,6 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-// TODO: delete if not needed
-func (r *resourceIntegration) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(names.AttrID), req, resp)
-}
-
-// TODO: move to wait.go
-func waitIntegrationCreated(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
-	stateConf := &retry.StateChangeConf{
-		Pending:        []string{integrationStatusCreating, integrationStatusModifying},
-		Target:         []string{integrationStatusActive}, //TODO: check if other statuses are needed like NeedsAttention/Syncing
-		Refresh:        statusIntegration(ctx, conn, arn),
-		Timeout:        timeout,
-		NotFoundChecks: 20, //TODO: delete if not needed
-	}
-
-	outputRaw, err := stateConf.WaitForStateContext(ctx)
-	if out, ok := outputRaw.(*awstypes.Integration); ok {
-		tfresource.SetLastError(err, errors.Join(tfslices.ApplyToAll(out.Errors, integrationError)...))
-
-		return out, err
-	}
-
-	return nil, err
-}
-
-// TODO: move to wait.go
-func waitIntegrationUpdated(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
-	stateConf := &retry.StateChangeConf{
-		Pending:        []string{integrationStatusModifying},
-		Target:         []string{integrationStatusActive}, //TODO: check if other statuses are needed like NeedsAttention/Syncing
-		Refresh:        statusIntegration(ctx, conn, arn),
-		Timeout:        timeout,
-		NotFoundChecks: 20, //TODO: delete if not needed
-	}
-
-	outputRaw, err := stateConf.WaitForStateContext(ctx)
-	if out, ok := outputRaw.(*awstypes.Integration); ok {
-		tfresource.SetLastError(err, errors.Join(tfslices.ApplyToAll(out.Errors, integrationError)...))
-
-		return out, err
-	}
-
-	return nil, err
-}
-
-// TODO: move to wait.go
-func waitIntegrationDeleted(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
-	stateConf := &retry.StateChangeConf{
-		Pending: []string{integrationStatusDeleting, integrationStatusActive},
-		Target:  []string{},
-		Refresh: statusIntegration(ctx, conn, arn),
-		Timeout: timeout,
-	}
-
-	outputRaw, err := stateConf.WaitForStateContext(ctx)
-	if out, ok := outputRaw.(*awstypes.Integration); ok {
-		tfresource.SetLastError(err, errors.Join(tfslices.ApplyToAll(out.Errors, integrationError)...))
-
-		return out, err
-	}
-
-	return nil, err
-}
-
-// TODO: move to status.go
-func statusIntegration(ctx context.Context, conn *redshift.Client, arn string) retry.StateRefreshFunc {
-	return func() (any, string, error) {
-		out, err := findIntegrationByARN(ctx, conn, arn)
-		if tfresource.NotFound(err) {
-			return nil, "", nil
-		}
-
-		if err != nil {
-			return nil, "", err
-		}
-
-		// return out, aws.ToString(out.Status), nil //TODO: Delete later
-		return out, string(out.Status), nil
-	}
-}
-
-// TODO: move to find.go
-func findIntegrationByARN(ctx context.Context, conn *redshift.Client, arn string) (*awstypes.Integration, error) {
-	input := &redshift.DescribeIntegrationsInput{
-		IntegrationArn: aws.String(arn),
-	}
-
-	return findIntegration(ctx, conn, input, tfslices.PredicateTrue[*awstypes.Integration]())
-}
-
-// TODO: move to find.go
-func findIntegration(ctx context.Context, conn *redshift.Client, input *redshift.DescribeIntegrationsInput, filter tfslices.Predicate[*awstypes.Integration]) (*awstypes.Integration, error) {
-	out, err := findIntegrations(ctx, conn, input, filter)
-
-	if err != nil {
-		return nil, err
-	}
-
-	//TODO: delete if not needed
-	if out == nil || out[0].IntegrationArn == nil {
-		return nil, tfresource.NewEmptyResultError(&input)
-	}
-
-	return tfresource.AssertSingleValueResult(out)
-}
-
-// TODO: move to find.go
-func findIntegrations(ctx context.Context, conn *redshift.Client, input *redshift.DescribeIntegrationsInput, filter tfslices.Predicate[*awstypes.Integration]) ([]awstypes.Integration, error) {
-	var out []awstypes.Integration
-
-	pages := redshift.NewDescribeIntegrationsPaginator(conn, input)
-	for pages.HasMorePages() {
-		page, err := pages.NextPage(ctx)
-
-		if errs.IsA[*awstypes.IntegrationNotFoundFault](err) {
-			return nil, &retry.NotFoundError{
-				LastError:   err,
-				LastRequest: input,
-			}
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		for _, v := range page.Integrations {
-			if filter(&v) {
-				out = append(out, v)
-			}
-		}
-	}
-
-	return out, nil
-}
-
 func integrationError(v awstypes.IntegrationError) error {
 	return fmt.Errorf("%s: %s", aws.ToString(v.ErrorCode), aws.ToString(v.ErrorMessage))
 }
@@ -503,32 +353,6 @@ type resourceIntegrationModel struct {
 	TargetARN                   fwtypes.ARN                      `tfsdk:"target_arn"`
 	Timeouts                    timeouts.Value                   `tfsdk:"timeouts"`
 }
-
-// Once the sweeper function is implemented, register it in sweeper.go
-// as follows:
-//	awsv2.Register("aws_redshift_integration", sweepIntegrations)
-// TODO: impl later //TODO: move it to sweep.go
-// func sweepIntegrations(ctx context.Context, client *conns.AWSClient) ([]sweep.Sweepable, error) {
-// 	input := redshift.ListIntegrationsInput{}
-// 	conn := client.RedshiftClient(ctx)
-// 	var sweepResources []sweep.Sweepable
-
-// 	pages := redshift.NewListIntegrationsPaginator(conn, &input)
-// 	for pages.HasMorePages() {
-// 		page, err := pages.NextPage(ctx)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		for _, v := range page.Integrations {
-// 			sweepResources = append(sweepResources, sweepfw.NewSweepResource(newResourceIntegration, client,
-// 				sweepfw.NewAttribute(names.AttrID, aws.ToString(v.IntegrationId))),
-// 			)
-// 		}
-// 	}
-
-// 	return sweepResources, nil
-// }
 
 func (model *resourceIntegrationModel) InitFromID() error {
 	model.IntegrationARN = model.ID

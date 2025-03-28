@@ -179,9 +179,18 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	plan.IntegrationARN = flex.StringToFramework(ctx, out.IntegrationArn)
 	plan.setID()
 
+	// TOOD: modify検討
+	prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
+
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// TODO: modify検討
+	// Null vs. empty map handling.
+	if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
+		plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
 	}
 
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
@@ -498,8 +507,8 @@ type resourceIntegrationModel struct {
 	IntegrationName             types.String                     `tfsdk:"integration_name"`
 	KMSKeyID                    types.String                     `tfsdk:"kms_key_id"`
 	SourceARN                   fwtypes.ARN                      `tfsdk:"source_arn"`
-	Tags                        types.Map                        `tfsdk:"tags"`
-	TagsAll                     types.Map                        `tfsdk:"tags_all"`
+	Tags                        tftags.Map                       `tfsdk:"tags"`
+	TagsAll                     tftags.Map                       `tfsdk:"tags_all"`
 	TargetARN                   fwtypes.ARN                      `tfsdk:"target_arn"`
 	Timeouts                    timeouts.Value                   `tfsdk:"timeouts"`
 }

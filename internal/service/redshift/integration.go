@@ -40,7 +40,6 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/names"
 )
 
-// OK
 // @FrameworkResource("aws_redshift_integration", name="Integration")
 // @Tags(identifierAttribute="arn")
 // @Testing(tagsTest=false)
@@ -54,7 +53,6 @@ func newResourceIntegration(_ context.Context) (resource.ResourceWithConfigure, 
 	return r, nil
 }
 
-// OK
 const (
 	integrationStatusActive         = "active"
 	integrationStatusCreating       = "creating"
@@ -65,24 +63,21 @@ const (
 	integrationStatusSyncing        = "syncing"
 )
 
-// OK
 const (
 	ResNameIntegration = "Integration"
 )
 
-// OK
 type resourceIntegration struct {
 	framework.ResourceWithConfigure
 	framework.WithImportByID
 	framework.WithTimeouts
 }
 
-// OK https://developer.hashicorp.com/terraform/plugin/framework/resources
-func (*resourceIntegration) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
-	response.TypeName = "aws_redshift_integration"
-}
+// !! https://developer.hashicorp.com/terraform/plugin/framework/resources
+// func (*resourceIntegration) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+// 	response.TypeName = "aws_redshift_integration"
+// }
 
-// OK
 func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -90,6 +85,7 @@ func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaReq
 				CustomType:  fwtypes.MapOfStringType,
 				ElementType: types.StringType, //TODO: check this is needed
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
 				},
@@ -137,7 +133,6 @@ func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaReq
 	}
 }
 
-// OK
 func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	conn := r.Meta().RedshiftClient(ctx)
 
@@ -156,7 +151,7 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 
 	// Additional fields.
 	// https://github.com/hashicorp/terraform-provider-aws/blob/main/docs/resource-tagging.md
-	// input.Tags = getTagsInV2(ctx) //TODO: survey later
+	input.TagList = getTagsIn(ctx) //TODO: survey later
 
 	out, err := conn.CreateIntegration(ctx, &input)
 	if err != nil {
@@ -179,19 +174,19 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	plan.IntegrationARN = flex.StringToFramework(ctx, out.IntegrationArn)
 	plan.setID()
 
-	// TOOD: modify検討
-	prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
+	// TOOD: delete if not needed
+	// prevAdditionalEncryptionContext := plan.AdditionalEncryptionContext
 
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TODO: modify検討
+	// TOOD: delete if not needed
 	// Null vs. empty map handling.
-	if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
-		plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
-	}
+	// if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
+	// 	plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
+	// }
 
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
 	integration, err := waitIntegrationCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
@@ -210,7 +205,6 @@ func (r *resourceIntegration) Create(ctx context.Context, req resource.CreateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
-// OK
 func (r *resourceIntegration) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	conn := r.Meta().RedshiftClient(ctx)
 
@@ -241,24 +235,25 @@ func (r *resourceIntegration) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	prevAdditionalEncryptionContext := state.AdditionalEncryptionContext
+	// TOOD: delete if not needed
+	// prevAdditionalEncryptionContext := state.AdditionalEncryptionContext
 
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// TOOD: delete if not needed
 	// Null vs. empty map handling.
-	if prevAdditionalEncryptionContext.IsNull() && !state.AdditionalEncryptionContext.IsNull() && len(state.AdditionalEncryptionContext.Elements()) == 0 {
-		state.AdditionalEncryptionContext = prevAdditionalEncryptionContext
-	}
+	// if prevAdditionalEncryptionContext.IsNull() && !state.AdditionalEncryptionContext.IsNull() && len(state.AdditionalEncryptionContext.Elements()) == 0 {
+	// 	state.AdditionalEncryptionContext = prevAdditionalEncryptionContext
+	// }
 
-	// setTagsOutV2(ctx, out.Tags) //TODO: survey later
+	setTagsOut(ctx, out.Tags) //TODO: survey later
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// OK
 func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	conn := r.Meta().RedshiftClient(ctx)
 
@@ -277,7 +272,7 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 
 	if diff.HasChanges() {
 		var input redshift.ModifyIntegrationInput
-		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input)...) //TODO: integration_name / descriptionだけ指定するように修正する必要あれば、そうする
+		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input)...) //TODO: !! modify here
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -318,7 +313,6 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// OK
 func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	conn := r.Meta().RedshiftClient(ctx)
 
@@ -358,12 +352,11 @@ func (r *resourceIntegration) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 // TODO: delete if not needed
-// OK
 func (r *resourceIntegration) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root(names.AttrID), req, resp)
 }
 
-// OK TODO: move to wait.go
+// TODO: move to wait.go
 func waitIntegrationCreated(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending:        []string{integrationStatusCreating, integrationStatusModifying},
@@ -383,7 +376,7 @@ func waitIntegrationCreated(ctx context.Context, conn *redshift.Client, arn stri
 	return nil, err
 }
 
-// OK TODO: move to wait.go
+// TODO: move to wait.go
 func waitIntegrationUpdated(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending:        []string{integrationStatusModifying},
@@ -403,7 +396,7 @@ func waitIntegrationUpdated(ctx context.Context, conn *redshift.Client, arn stri
 	return nil, err
 }
 
-// OK TODO: move to wait.go
+// TODO: move to wait.go
 func waitIntegrationDeleted(ctx context.Context, conn *redshift.Client, arn string, timeout time.Duration) (*awstypes.Integration, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{integrationStatusDeleting, integrationStatusActive},
@@ -422,7 +415,7 @@ func waitIntegrationDeleted(ctx context.Context, conn *redshift.Client, arn stri
 	return nil, err
 }
 
-// OK TODO: move to status.go
+// TODO: move to status.go
 func statusIntegration(ctx context.Context, conn *redshift.Client, arn string) retry.StateRefreshFunc {
 	return func() (any, string, error) {
 		out, err := findIntegrationByARN(ctx, conn, arn)
@@ -439,7 +432,7 @@ func statusIntegration(ctx context.Context, conn *redshift.Client, arn string) r
 	}
 }
 
-// OK TODO: move to find.go
+// TODO: move to find.go
 func findIntegrationByARN(ctx context.Context, conn *redshift.Client, arn string) (*awstypes.Integration, error) {
 	input := &redshift.DescribeIntegrationsInput{
 		IntegrationArn: aws.String(arn),
@@ -448,7 +441,7 @@ func findIntegrationByARN(ctx context.Context, conn *redshift.Client, arn string
 	return findIntegration(ctx, conn, input, tfslices.PredicateTrue[*awstypes.Integration]())
 }
 
-// OK TODO: move to find.go
+// TODO: move to find.go
 func findIntegration(ctx context.Context, conn *redshift.Client, input *redshift.DescribeIntegrationsInput, filter tfslices.Predicate[*awstypes.Integration]) (*awstypes.Integration, error) {
 	out, err := findIntegrations(ctx, conn, input, filter)
 
@@ -464,7 +457,7 @@ func findIntegration(ctx context.Context, conn *redshift.Client, input *redshift
 	return tfresource.AssertSingleValueResult(out)
 }
 
-// OK TODO: move to find.go
+// TODO: move to find.go
 func findIntegrations(ctx context.Context, conn *redshift.Client, input *redshift.DescribeIntegrationsInput, filter tfslices.Predicate[*awstypes.Integration]) ([]awstypes.Integration, error) {
 	var out []awstypes.Integration
 
@@ -493,12 +486,10 @@ func findIntegrations(ctx context.Context, conn *redshift.Client, input *redshif
 	return out, nil
 }
 
-// OK
 func integrationError(v awstypes.IntegrationError) error {
 	return fmt.Errorf("%s: %s", aws.ToString(v.ErrorCode), aws.ToString(v.ErrorMessage))
 }
 
-// OK
 type resourceIntegrationModel struct {
 	AdditionalEncryptionContext fwtypes.MapValueOf[types.String] `tfsdk:"additional_encryption_context"`
 	Description                 types.String                     `tfsdk:"description"`
@@ -539,14 +530,12 @@ type resourceIntegrationModel struct {
 // 	return sweepResources, nil
 // }
 
-// OK
 func (model *resourceIntegrationModel) InitFromID() error {
 	model.IntegrationARN = model.ID
 
 	return nil
 }
 
-// OK
 func (model *resourceIntegrationModel) setID() {
 	model.ID = model.IntegrationARN
 }

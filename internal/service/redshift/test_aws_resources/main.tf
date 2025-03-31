@@ -302,6 +302,22 @@ resource "aws_redshift_resource_policy" "redshift_policy" {
       {
         Effect = "Allow"
         Principal = {
+          Service = "redshift.amazonaws.com"
+        }
+        Action   = "redshift:AuthorizeInboundIntegration"
+        Resource = aws_redshift_cluster.main.cluster_namespace_arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceArn" = [
+              aws_s3_bucket.sample.arn,
+              aws_s3_bucket.sample2.arn
+            ]
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "redshift:CreateInboundIntegration"
@@ -366,6 +382,9 @@ resource "aws_redshiftserverless_namespace" "serverless_namespace" {
   admin_username      = "redshiftadmin"
   admin_user_password = "Ddnf109DHccnwockr74d9dkDNGysfk"
   db_name             = "dev"
+
+  # for local testing use only
+  iam_roles = [aws_iam_role.redshift_s3_role.arn]
 }
 
 resource "aws_redshiftserverless_workgroup" "serverless_workgroup" {
@@ -414,6 +433,22 @@ resource "aws_redshift_resource_policy" "serverless_integration_policy" {
       {
         Effect = "Allow"
         Principal = {
+          Service = "redshift.amazonaws.com"
+        }
+        Action   = "redshift:AuthorizeInboundIntegration"
+        Resource = aws_redshiftserverless_namespace.serverless_namespace.arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceArn" = [
+              aws_s3_bucket.sample.arn,
+              aws_s3_bucket.sample2.arn
+            ]
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "redshift:CreateInboundIntegration"
@@ -421,4 +456,146 @@ resource "aws_redshift_resource_policy" "serverless_integration_policy" {
       }
     ]
   })
+}
+
+resource "aws_s3_bucket" "sample" {
+  bucket = "sample-s3-redshift-integration"
+}
+
+resource "aws_s3_bucket_public_access_block" "sample" {
+  bucket = aws_s3_bucket.sample.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "sample_policy" {
+  bucket = aws_s3_bucket.sample.id
+
+  policy = jsonencode({
+    "Version" = "2012-10-17",
+    "Statement" = [
+      {
+        "Sid"    = "Auto-Copy-Policy-01",
+        "Effect" = "Allow",
+        "Principal" = {
+          "Service" = [
+            "redshift.amazonaws.com",
+            "redshift-serverless.amazonaws.com"
+          ]
+        },
+        "Action" : [
+          "s3:GetBucketNotification",
+          "s3:PutBucketNotification",
+          "s3:GetBucketLocation"
+        ],
+        "Resource" = aws_s3_bucket.sample.arn
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket" "sample2" {
+  bucket = "sample-s3-redshift-integration2"
+}
+
+resource "aws_s3_bucket_public_access_block" "sample2" {
+  bucket = aws_s3_bucket.sample2.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "sample_policy2" {
+  bucket = aws_s3_bucket.sample2.id
+
+  policy = jsonencode({
+    "Version" = "2012-10-17",
+    "Statement" = [
+      {
+        "Sid"    = "Auto-Copy-Policy-01",
+        "Effect" = "Allow",
+        "Principal" = {
+          "Service" = [
+            "redshift.amazonaws.com",
+            "redshift-serverless.amazonaws.com"
+          ]
+        },
+        "Action" : [
+          "s3:GetBucketNotification",
+          "s3:PutBucketNotification",
+          "s3:GetBucketLocation"
+        ],
+        "Resource" = aws_s3_bucket.sample2.arn
+      }
+    ]
+  })
+}
+
+## for local testing only
+resource "aws_iam_role" "redshift_s3_role" {
+  name = "redshift-s3-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "redshift.amazonaws.com",
+          "redshift-serverless.amazonaws.com"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "redshift_s3_policy" {
+  name = "redshift-s3-policy"
+  role = aws_iam_role.redshift_s3_role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RedshiftFullAccess",
+      "Effect": "Allow",
+      "Action": "redshift:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "RedshiftServerlessFullAccess",
+      "Effect": "Allow",
+      "Action": "redshift-serverless:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3LimitedAccess",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": [
+        "${aws_s3_bucket.sample.arn}",
+        "${aws_s3_bucket.sample.arn}/*",
+        "${aws_s3_bucket.sample2.arn}",
+        "${aws_s3_bucket.sample2.arn}/*"
+      ]
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_redshift_cluster_iam_roles" "sample1" {
+  cluster_identifier = aws_redshift_cluster.main.cluster_identifier
+  iam_role_arns      = [aws_iam_role.redshift_s3_role.arn]
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -87,6 +88,7 @@ func (r *resourceIntegration) Schema(ctx context.Context, req resource.SchemaReq
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
+					&ignoreKmsKeyIdForS3Modifier{},
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -361,4 +363,29 @@ func (model *resourceIntegrationModel) InitFromID() error {
 
 func (model *resourceIntegrationModel) setID() {
 	model.ID = model.IntegrationARN
+}
+
+type ignoreKmsKeyIdForS3Modifier struct{}
+
+func (m *ignoreKmsKeyIdForS3Modifier) Description(_ context.Context) string {
+	return "If source_arn is an S3 ARN and ConfigValue is null, do not show any differences."
+}
+
+func (m *ignoreKmsKeyIdForS3Modifier) MarkdownDescription(_ context.Context) string {
+	return m.Description(context.Background())
+}
+
+func (m *ignoreKmsKeyIdForS3Modifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	var plan resourceIntegrationModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// when source_arn is an S3 ARN and ConfigValue is null, do not show any differences.
+	matched, _ := regexp.MatchString(`^arn:aws[a-z\-]*:s3:.*$`, plan.SourceARN.ValueString())
+	if matched && req.ConfigValue.IsNull() {
+		resp.PlanValue = req.StateValue
+	}
 }

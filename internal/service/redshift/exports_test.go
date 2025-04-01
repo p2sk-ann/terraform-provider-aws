@@ -39,6 +39,7 @@ var (
 	FindEventSubscriptionByName                 = findEventSubscriptionByName
 	FindHSMClientCertificateByID                = findHSMClientCertificateByID
 	FindHSMConfigurationByID                    = findHSMConfigurationByID
+	FindIntegrationByARN                        = findIntegrationByARN
 	FindLoggingByID                             = findLoggingByID
 	FindParameterGroupByName                    = findParameterGroupByName
 	FindPartnerByID                             = findPartnerByID

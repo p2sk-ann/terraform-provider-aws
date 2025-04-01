@@ -400,6 +400,38 @@ resource "aws_redshiftserverless_workgroup" "serverless_workgroup" {
     parameter_key   = "enable_case_sensitive_identifier"
     parameter_value = "true"
   }
+  config_parameter {
+    parameter_key   = "auto_mv"
+    parameter_value = "true"
+  }
+  config_parameter {
+    parameter_key   = "datestyle"
+    parameter_value = "ISO, MDY"
+  }
+  config_parameter {
+    parameter_key   = "enable_user_activity_logging"
+    parameter_value = "true"
+  }
+  config_parameter {
+    parameter_key   = "max_query_execution_time"
+    parameter_value = "14400"
+  }
+  config_parameter {
+    parameter_key   = "query_group"
+    parameter_value = "default"
+  }
+  config_parameter {
+    parameter_key   = "require_ssl"
+    parameter_value = "false"
+  }
+  config_parameter {
+    parameter_key   = "search_path"
+    parameter_value = "$user, public"
+  }
+  config_parameter {
+    parameter_key   = "use_fips_ssl"
+    parameter_value = "false"
+  }
 }
 
 # これでOKであることを確認。（コンソールでの自動修正で生成されたpolicyと一致）

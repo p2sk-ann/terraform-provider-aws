@@ -123,7 +123,7 @@ resource "aws_dynamodb_resource_policy" "dynamodb_policy" {
           "dynamodb:ExportTableToPointInTime",
           "dynamodb:DescribeTable"
         ]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.sample.name}"
+        Resource = aws_dynamodb_table.sample.arn
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
@@ -139,7 +139,7 @@ resource "aws_dynamodb_resource_policy" "dynamodb_policy" {
           Service = "redshift.amazonaws.com"
         }
         Action   = "dynamodb:DescribeExport"
-        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.sample.name}/export/*"
+        Resource = "${aws_dynamodb_table.sample.arn}/export/*"
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id

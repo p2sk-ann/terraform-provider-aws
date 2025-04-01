@@ -112,7 +112,7 @@ resource "aws_dynamodb_table" "sample" {
 resource "aws_dynamodb_resource_policy" "dynamodb_policy" {
   resource_arn = aws_dynamodb_table.sample.arn
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2008-10-17"
     Statement = [
       {
         Effect = "Allow"
@@ -202,7 +202,7 @@ resource "aws_dynamodb_table" "sample2" {
 resource "aws_dynamodb_resource_policy" "dynamodb_policy2" {
   resource_arn = aws_dynamodb_table.sample2.arn
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2008-10-17"
     Statement = [
       {
         Effect = "Allow"
@@ -281,7 +281,7 @@ resource "aws_redshift_resource_policy" "redshift_policy" {
   resource_arn = aws_redshift_cluster.main.cluster_namespace_arn
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2008-10-17"
     Statement = [
       {
         Effect = "Allow"
@@ -341,10 +341,9 @@ resource "aws_kms_key_policy" "redshift_kms_policy_attachment" {
   key_id = aws_kms_key.redshift_dynamodb_key.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2008-10-17"
     Statement = [
       {
-        Sid    = "AllowFullAccessToCurrentAccount"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
@@ -353,7 +352,6 @@ resource "aws_kms_key_policy" "redshift_kms_policy_attachment" {
         Resource = "*"
       },
       {
-        Sid    = "Statement to allow Amazon Redshift service to perform Decrypt operation on the source DynamoDB Table"
         Effect = "Allow"
         Principal = {
           Service = "redshift.amazonaws.com"
@@ -412,7 +410,7 @@ resource "aws_redshift_resource_policy" "serverless_integration_policy" {
   resource_arn = aws_redshiftserverless_namespace.serverless_namespace.arn
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2008-10-17"
     Statement = [
       {
         Effect = "Allow"
@@ -475,23 +473,22 @@ resource "aws_s3_bucket_policy" "sample_policy" {
   bucket = aws_s3_bucket.sample.id
 
   policy = jsonencode({
-    "Version" = "2012-10-17",
-    "Statement" = [
+    Version = "2008-10-17",
+    Statement = [
       {
-        "Sid"    = "Auto-Copy-Policy-01",
-        "Effect" = "Allow",
-        "Principal" = {
-          "Service" = [
+        Effect = "Allow",
+        Principal = {
+          Service = [
             "redshift.amazonaws.com",
             "redshift-serverless.amazonaws.com"
           ]
         },
-        "Action" : [
+        Action : [
           "s3:GetBucketNotification",
           "s3:PutBucketNotification",
           "s3:GetBucketLocation"
         ],
-        "Resource" = aws_s3_bucket.sample.arn
+        Resource = aws_s3_bucket.sample.arn
       }
     ]
   })
@@ -514,10 +511,9 @@ resource "aws_s3_bucket_policy" "sample_policy2" {
   bucket = aws_s3_bucket.sample2.id
 
   policy = jsonencode({
-    "Version" = "2012-10-17",
+    "Version" = "2008-10-17",
     "Statement" = [
       {
-        "Sid"    = "Auto-Copy-Policy-01",
         "Effect" = "Allow",
         "Principal" = {
           "Service" = [
@@ -542,7 +538,7 @@ resource "aws_iam_role" "redshift_s3_role" {
 
   assume_role_policy = <<EOF
 {
-  "Version": "2012-10-17",
+  "Version": "2008-10-17",
   "Statement": [
     {
       "Effect": "Allow",
@@ -565,22 +561,19 @@ resource "aws_iam_role_policy" "redshift_s3_policy" {
 
   policy = <<EOF
 {
-  "Version": "2012-10-17",
+  "Version": "2008-10-17",
   "Statement": [
     {
-      "Sid": "RedshiftFullAccess",
       "Effect": "Allow",
       "Action": "redshift:*",
       "Resource": "*"
     },
     {
-      "Sid": "RedshiftServerlessFullAccess",
       "Effect": "Allow",
       "Action": "redshift-serverless:*",
       "Resource": "*"
     },
     {
-      "Sid": "S3LimitedAccess",
       "Effect": "Allow",
       "Action": "s3:*",
       "Resource": [

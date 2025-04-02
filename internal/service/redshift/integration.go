@@ -284,7 +284,6 @@ func (r *resourceIntegration) Update(ctx context.Context, req resource.UpdateReq
 		if prevAdditionalEncryptionContext.IsNull() && !plan.AdditionalEncryptionContext.IsNull() && len(plan.AdditionalEncryptionContext.Elements()) == 0 {
 			plan.AdditionalEncryptionContext = prevAdditionalEncryptionContext
 		}
-
 	}
 
 	updateTimeout := r.UpdateTimeout(ctx, plan.Timeouts)
@@ -372,7 +371,7 @@ func (m *ignoreKmsKeyIdForS3Modifier) Description(_ context.Context) string {
 }
 
 func (m *ignoreKmsKeyIdForS3Modifier) MarkdownDescription(_ context.Context) string {
-	return m.Description(context.Background())
+	return "If source_arn is an S3 ARN and ConfigValue is null, do not show any differences."
 }
 
 func (m *ignoreKmsKeyIdForS3Modifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {

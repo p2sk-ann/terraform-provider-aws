@@ -57,6 +57,7 @@ resource "aws_redshift_integration" "example" {
 ```
 
 ### Use own KMS key
+
 ```terraform
 data "aws_caller_identity" "current" {}
 

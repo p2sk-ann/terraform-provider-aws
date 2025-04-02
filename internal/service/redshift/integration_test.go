@@ -491,7 +491,7 @@ resource "aws_redshift_integration" "test" {
     aws_redshiftserverless_namespace.test,
     aws_redshiftserverless_workgroup.test,
     aws_redshift_resource_policy.test,
-	aws_dynamodb_resource_policy.test,
+    aws_dynamodb_resource_policy.test,
   ]
 }
 `, rName))
@@ -546,7 +546,6 @@ resource "aws_redshift_integration" "test" {
   integration_name = %[1]q
   source_arn       = aws_dynamodb_table.test.arn
   target_arn       = aws_redshiftserverless_namespace.test.arn
-
   kms_key_id       = aws_kms_key.test.arn
 
   additional_encryption_context = {
@@ -554,7 +553,7 @@ resource "aws_redshift_integration" "test" {
   }
 
   tags = {
-     %[2]q = %[3]q
+    %[2]q = %[3]q
   }
 
   depends_on = [
@@ -562,7 +561,7 @@ resource "aws_redshift_integration" "test" {
     aws_redshiftserverless_namespace.test,
     aws_redshiftserverless_workgroup.test,
     aws_redshift_resource_policy.test,
-	aws_dynamodb_resource_policy.test,
+    aws_dynamodb_resource_policy.test,
   ]
 }
 `, rName, acctest.CtKey1, acctest.CtValue1))
@@ -577,7 +576,7 @@ resource "aws_redshift_integration" "test" {
   target_arn       = aws_redshiftserverless_namespace.test.arn
 
   tags = {
-     %[3]q = %[4]q
+    %[3]q = %[4]q
   }
 
   depends_on = [
@@ -585,7 +584,7 @@ resource "aws_redshift_integration" "test" {
     aws_redshiftserverless_namespace.test,
     aws_redshiftserverless_workgroup.test,
     aws_redshift_resource_policy.test,
-	aws_s3_bucket_policy.test,
+    aws_s3_bucket_policy.test,
   ]
 }
 `, description, integration_name, acctest.CtKey1, acctest.CtValue1))

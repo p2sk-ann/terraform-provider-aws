@@ -117,7 +117,7 @@ func TestAccRedshiftIntegration_optional(t *testing.T) {
 				Config: testAccIntegrationConfig_optional(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckIntegrationExists(ctx, resourceName, &integration),
-					resource.TestCheckResourceAttr(resourceName, "description", rName),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, rName),
 					resource.TestCheckResourceAttr(resourceName, "integration_name", rName),
 					resource.TestCheckResourceAttrPair(resourceName, names.AttrKMSKeyID, "aws_kms_key.test", names.AttrARN),
 					resource.TestCheckResourceAttrPair(resourceName, "source_arn", "aws_dynamodb_table.test", names.AttrARN),

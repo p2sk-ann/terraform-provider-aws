@@ -422,7 +422,7 @@ resource "aws_redshiftserverless_workgroup" "serverless_workgroup" {
   }
   config_parameter {
     parameter_key   = "require_ssl"
-    parameter_value = "false"
+    parameter_value = "true"
   }
   config_parameter {
     parameter_key   = "search_path"
@@ -510,10 +510,7 @@ resource "aws_s3_bucket_policy" "sample_policy" {
       {
         Effect = "Allow",
         Principal = {
-          Service = [
-            "redshift.amazonaws.com",
-            "redshift-serverless.amazonaws.com"
-          ]
+          Service = "redshift.amazonaws.com"
         },
         Action : [
           "s3:GetBucketNotification",

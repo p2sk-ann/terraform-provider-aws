@@ -530,7 +530,7 @@ resource "aws_kms_key_policy" "test" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:SourceAccount" = "${data.aws_caller_identity.current.account_id}"
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
           ArnEquals = {
             "aws:SourceArn" = "arn:${data.aws_partition.current.partition}:redshift:*:${data.aws_caller_identity.current.account_id}:integration:*"

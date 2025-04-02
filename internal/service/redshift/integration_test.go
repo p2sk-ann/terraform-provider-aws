@@ -144,6 +144,8 @@ func TestAccRedshiftIntegration_sourceUsesS3Bucket(t *testing.T) {
 	ctx := acctest.Context(t)
 	var integration awstypes.Integration
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
+	description := sdkacctest.RandomWithPrefix("tf-acc-test-update")
+	integration_name := sdkacctest.RandomWithPrefix("tf-acc-test-update")
 	resourceName := "aws_redshift_integration.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -157,11 +159,28 @@ func TestAccRedshiftIntegration_sourceUsesS3Bucket(t *testing.T) {
 		CheckDestroy:             testAccCheckIntegrationDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIntegrationConfig_sourceUsesS3Bucket(rName),
+				Config: testAccIntegrationConfig_sourceUsesS3Bucket(rName, rName, rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckIntegrationExists(ctx, resourceName, &integration),
-					resource.TestCheckResourceAttr(resourceName, "description", rName),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, rName),
 					resource.TestCheckResourceAttr(resourceName, "integration_name", rName),
+					resource.TestCheckResourceAttrPair(resourceName, "source_arn", "aws_s3_bucket.test", names.AttrARN),
+					resource.TestCheckResourceAttrPair(resourceName, names.AttrTargetARN, "aws_redshiftserverless_namespace.test", names.AttrARN),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, "1"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey1, acctest.CtValue1),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccIntegrationConfig_sourceUsesS3Bucket(rName, description, integration_name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckIntegrationExists(ctx, resourceName, &integration),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, description),
+					resource.TestCheckResourceAttr(resourceName, "integration_name", integration_name),
 					resource.TestCheckResourceAttrPair(resourceName, "source_arn", "aws_s3_bucket.test", names.AttrARN),
 					resource.TestCheckResourceAttrPair(resourceName, names.AttrTargetARN, "aws_redshiftserverless_namespace.test", names.AttrARN),
 					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, "1"),
@@ -549,16 +568,16 @@ resource "aws_redshift_integration" "test" {
 `, rName, acctest.CtKey1, acctest.CtValue1))
 }
 
-func testAccIntegrationConfig_sourceUsesS3Bucket(rName string) string {
+func testAccIntegrationConfig_sourceUsesS3Bucket(rName, description, integration_name string) string {
 	return acctest.ConfigCompose(testAccIntegrationConfig_baseSourceAndTarget(rName), fmt.Sprintf(`
 resource "aws_redshift_integration" "test" {
   description      = %[1]q
-  integration_name = %[1]q
+  integration_name = %[2]q
   source_arn       = aws_s3_bucket.test.arn
   target_arn       = aws_redshiftserverless_namespace.test.arn
 
   tags = {
-     %[2]q = %[3]q
+     %[3]q = %[4]q
   }
 
   depends_on = [
@@ -569,5 +588,5 @@ resource "aws_redshift_integration" "test" {
 	aws_s3_bucket_policy.test,
   ]
 }
-`, rName, acctest.CtKey1, acctest.CtValue1))
+`, description, integration_name, acctest.CtKey1, acctest.CtValue1))
 }

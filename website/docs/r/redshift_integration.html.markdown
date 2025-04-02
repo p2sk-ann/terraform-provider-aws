@@ -121,7 +121,7 @@ For more detailed documentation about each argument, refer to the [AWS official 
 The following arguments are required:
 
 * `integration_name` - (Required) Name of the integration.
-* `source_arn` - (Required, Forces new resources) ARN of the database to use as the source for replication.
+* `source_arn` - (Required, Forces new resources) ARN of the database to use as the source for replication. You can specify a DynamoDB table or an S3 bucket.
 * `target_arn` - (Required, Forces new resources) ARN of the Redshift data warehouse to use as the target for replication.
 
 The following arguments are optional:
@@ -132,7 +132,7 @@ You can only include this parameter if you specify the `kms_key_id` parameter.
 * `description` - (Optional) Description of the integration.
 * `kms_key_id` - (Optional, Forces new resources) KMS key identifier for the key to use to encrypt the integration.
 If you don't specify an encryption key, Redshift uses a default AWS owned key.
-You can only include this parameter if source_arn references a DynamoDB table.
+You can only include this parameter if `source_arn` references a DynamoDB table.
 * `tags` - (Optional) Key-value map of resource tags. If configured with a provider [`default_tags` configuration block](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#default_tags-configuration-block) present, tags with matching keys will overwrite those defined at the provider-level.
 
 ## Attribute Reference
